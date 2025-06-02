@@ -79,7 +79,7 @@ class ProtectedView(APIView):
 
 User = get_user_model()
 class PasswordResetRequestThrottle(AnonRateThrottle):
-    rate = '5/hour'
+    rate = '6/hour'
 
 class PasswordResetRequestView(APIView):
     throttle_classes = [PasswordResetRequestThrottle]
