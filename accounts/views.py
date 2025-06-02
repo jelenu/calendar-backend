@@ -57,6 +57,9 @@ class ActivateAccountView(APIView):
         except (TypeError, ValueError, OverflowError):
             return Response({'error': 'Invalid Token'}, status=status.HTTP_400_BAD_REQUEST)
 
+        if user.is_active:
+            return Response({'error': 'Account already active.'}, status=status.HTTP_400_BAD_REQUEST)
+
         if default_token_generator.check_token(user, token):
             user.is_active = True
             user.save()
