@@ -12,6 +12,20 @@ from django.utils.http import urlsafe_base64_decode
 from django.shortcuts import get_object_or_404
 from .models import CustomUser
 from rest_framework.permissions import IsAuthenticated
+from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password, ValidationError
+from rest_framework.throttling import AnonRateThrottle
+import logging
+from datetime import datetime
+
+# Configure logger
+logger = logging.getLogger("password_reset")
+handler = logging.FileHandler("password_reset.log")
+formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+handler.setFormatter(formatter)
+if not logger.hasHandlers():
+    logger.addHandler(handler)
+logger.setLevel(logging.INFO)
 
 class RegisterView(APIView):
     def post(self, request):
@@ -57,3 +71,71 @@ class ProtectedView(APIView):
 
     def get(self, request):
         return Response({'msg': f'{request.user.email}, you have access to this protected view.'}, status=status.HTTP_200_OK)
+
+
+
+User = get_user_model()
+class PasswordResetRequestThrottle(AnonRateThrottle):
+    rate = '5/hour'
+
+class PasswordResetRequestView(APIView):
+    throttle_classes = [PasswordResetRequestThrottle]
+
+    def post(self, request):
+        email = request.data.get('email')
+        user = User.objects.filter(email=email).first()
+        ip = request.META.get('REMOTE_ADDR')
+        logger.info(f"Password reset requested for {email} from IP {ip} at {datetime.now()}")
+        if not user:
+            return Response({'msg': 'This email does not exist in our system.'}, status=status.HTTP_404_NOT_FOUND)
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = default_token_generator.make_token(user)
+        reset_url = f"http://{get_current_site(request).domain}/api/auth/reset-password-confirm/{uid}/{token}/"
+
+        send_mail(
+            subject='Reset your password',
+            message=f'Use this link to reset your password: {reset_url}',
+            from_email='noreply@authsystem.com',
+            recipient_list=[email],
+        )
+        return Response({'msg': 'If the email exists, a password reset link has been sent.'}, status=status.HTTP_200_OK)
+
+class PasswordResetConfirmView(APIView):
+    def post(self, request, uidb64, token):
+        password = request.data.get("password")
+        try:
+            uid = urlsafe_base64_decode(uidb64).decode()
+            user = User.objects.get(pk=uid)
+        except Exception:
+            return Response({"error": "Invalid token"}, status=400)
+
+        if not default_token_generator.check_token(user, token):
+            return Response({"error": "Invalid or expired token"}, status=400)
+
+        try:
+            validate_password(password, user)
+        except ValidationError as e:
+            return Response({"error": e.messages}, status=400)
+
+        user.set_password(password)
+        user.save()
+        ip = request.META.get('REMOTE_ADDR')
+        logger.info(f"Password reset confirmed for {user.email} from IP {ip} at {datetime.now()}")
+        return Response({"msg": "Password reset successfully"}, status=200)
+    
+from rest_framework.permissions import IsAuthenticated
+
+class PasswordChangeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        old_password = request.data.get("old_password")
+        new_password = request.data.get("new_password")
+
+        if not user.check_password(old_password):
+            return Response({"error": "Incorrect current password"}, status=400)
+
+        user.set_password(new_password)
+        user.save()
+        return Response({"msg": "Password changed successfully"}, status=200)
