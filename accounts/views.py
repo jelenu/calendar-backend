@@ -11,6 +11,8 @@ from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_decode
 from django.shortcuts import get_object_or_404
 from .models import CustomUser
+from rest_framework.permissions import IsAuthenticated
+
 class RegisterView(APIView):
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
@@ -47,3 +49,11 @@ class ActivateAccountView(APIView):
             return Response({'msg': 'Account actived'}, status=status.HTTP_200_OK)
         else:
             return Response({'error': 'Invalid or expired token'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+class ProtectedView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return Response({'msg': f'{request.user.email}, you have access to this protected view.'}, status=status.HTTP_200_OK)
