@@ -17,7 +17,8 @@ from django.contrib.auth.password_validation import validate_password, Validatio
 from rest_framework.throttling import AnonRateThrottle
 import logging
 from datetime import datetime
-
+from drf_spectacular.utils import extend_schema
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 # Configure logger
 logger = logging.getLogger("password_reset")
 handler = logging.FileHandler("password_reset.log")
@@ -27,6 +28,15 @@ if not logger.hasHandlers():
     logger.addHandler(handler)
 logger.setLevel(logging.INFO)
 
+@extend_schema(tags=["Token Management"])
+class TokenObtainPairView(TokenObtainPairView):
+    pass
+
+@extend_schema(tags=["Token Management"])
+class TokenRefreshView(TokenRefreshView):
+    pass
+
+@extend_schema(tags=["Registration"])
 class RegisterView(APIView):
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
@@ -48,7 +58,7 @@ class RegisterView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-
+@extend_schema(tags=["Registration"])
 class ActivateAccountView(APIView):
     def get(self, request, uidb64, token):
         try:
@@ -68,7 +78,7 @@ class ActivateAccountView(APIView):
             return Response({'error': 'Invalid or expired token'}, status=status.HTTP_400_BAD_REQUEST)
 
 
-
+@extend_schema(tags=["Example Protected View"])
 class ProtectedView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -78,9 +88,10 @@ class ProtectedView(APIView):
 
 
 User = get_user_model()
+
 class PasswordResetRequestThrottle(AnonRateThrottle):
     rate = '6/hour'
-
+@extend_schema(tags=["Password Reset"])
 class PasswordResetRequestView(APIView):
     throttle_classes = [PasswordResetRequestThrottle]
 
@@ -103,6 +114,7 @@ class PasswordResetRequestView(APIView):
         )
         return Response({'msg': 'If the email exists, a password reset link has been sent.'}, status=status.HTTP_200_OK)
 
+@extend_schema(tags=["Password Reset"])
 class PasswordResetConfirmView(APIView):
     def post(self, request, uidb64, token):
         password = request.data.get("password")
@@ -128,6 +140,7 @@ class PasswordResetConfirmView(APIView):
     
 from rest_framework.permissions import IsAuthenticated
 
+@extend_schema(tags=["Password Change"])
 class PasswordChangeView(APIView):
     permission_classes = [IsAuthenticated]
 
