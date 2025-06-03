@@ -31,6 +31,8 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
 
     'pytest',
+
+    'drf_spectacular',
     
     'accounts',
 ]
@@ -126,4 +128,13 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'AuthSystem API',
+    'DESCRIPTION': 'Documentation for the AuthSystem API',
+    'VERSION': '1.0.0',
 }
