@@ -1,7 +1,12 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import RegisterSerializer
+from .serializers import (
+    RegisterSerializer,
+    PasswordResetRequestSerializer,
+    PasswordResetConfirmSerializer,
+    PasswordChangeSerializer,
+)
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.mail import send_mail
 from django.urls import reverse
@@ -19,6 +24,7 @@ import logging
 from datetime import datetime
 from drf_spectacular.utils import extend_schema
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+
 # Configure logger
 logger = logging.getLogger("password_reset")
 handler = logging.FileHandler("password_reset.log")
@@ -36,7 +42,7 @@ class TokenObtainPairView(TokenObtainPairView):
 class TokenRefreshView(TokenRefreshView):
     pass
 
-@extend_schema(tags=["Registration"])
+@extend_schema(tags=["Registration"], request=RegisterSerializer)
 class RegisterView(APIView):
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
@@ -91,7 +97,10 @@ User = get_user_model()
 
 class PasswordResetRequestThrottle(AnonRateThrottle):
     rate = '6/hour'
-@extend_schema(tags=["Password Reset"])
+@extend_schema(
+    tags=["Password Reset"],
+    request=PasswordResetRequestSerializer,
+)
 class PasswordResetRequestView(APIView):
     throttle_classes = [PasswordResetRequestThrottle]
 
@@ -114,10 +123,16 @@ class PasswordResetRequestView(APIView):
         )
         return Response({'msg': 'If the email exists, a password reset link has been sent.'}, status=status.HTTP_200_OK)
 
-@extend_schema(tags=["Password Reset"])
+@extend_schema(
+    tags=["Password Reset"],
+    request=PasswordResetConfirmSerializer,
+)
 class PasswordResetConfirmView(APIView):
     def post(self, request, uidb64, token):
-        password = request.data.get("password")
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=400)
+        password = serializer.validated_data["password"]
         try:
             uid = urlsafe_base64_decode(uidb64).decode()
             user = User.objects.get(pk=uid)
@@ -140,14 +155,21 @@ class PasswordResetConfirmView(APIView):
     
 from rest_framework.permissions import IsAuthenticated
 
-@extend_schema(tags=["Password Change"])
+@extend_schema(
+    tags=["Password Change"],
+    request=PasswordChangeSerializer,
+)
 class PasswordChangeView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        serializer = PasswordChangeSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=400)
+        old_password = serializer.validated_data["old_password"]
+        new_password = serializer.validated_data["new_password"]
+
         user = request.user
-        old_password = request.data.get("old_password")
-        new_password = request.data.get("new_password")
 
         if not old_password or not new_password:
             return Response({"error": "Both old_password and new_password are required."}, status=400)
