@@ -195,6 +195,60 @@ sudo apt install certbot python3-certbot-nginx -y
 sudo certbot --nginx -d auth.yourdomain.com
 ```
 
+## 🧱 How to Use This Project as a Base for Your Own Projects
+
+You can use this repository as a template for any Django project that needs robust user authentication with JWT, email verification, and a solid user system.
+
+### ✅ Steps to Get Started
+
+1. **Clone the repository:**
+
+   ```bash
+   git clone https://github.com/jelenu/AuthSystem.git my_project
+   cd my_project
+   ```
+
+2. **Rename the project (optional):**
+
+   By default, the project is named `auth_system`. If you want to use a different name (e.g., `myapp`), follow these steps:
+
+   - Rename the project directory:
+     ```bash
+     mv auth_system myapp
+     ```
+
+   - Replace all internal references to `auth_system` with your new project name (`myapp`).  
+     Edit the following files:
+     - `manage.py`
+     - `my_project/wsgi.py`
+     - `my_project/asgi.py`
+     - `my_project/settings.py` (look for `ROOT_URLCONF = "auth_system.urls"` and `WSGI_APPLICATION = "auth_system.wsgi.application"`)
+     - Any `urls.py` or other files where you import from `auth_system`
+
+3. **Install dependencies:**
+
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   pip install -r requirements.txt
+   ```
+
+4. **Configure environment variables and settings:**
+
+   - Update `settings.py` with your own configuration: secret keys, database credentials, email service, allowed hosts, etc.
+   - Create and edit your `.env` file as needed.
+
+5. **Run migrations and start developing:**
+
+   ```bash
+   python manage.py migrate
+   python manage.py runserver
+   ```
+
+---
+
+**Now you have a solid Django authentication base ready to build your own features!**
+
 ## 🧪 Testing
 
 ```bash
