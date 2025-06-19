@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import CategoryViewSet, EventViewSet
 
 router = DefaultRouter()
-router.register(r'', CategoryViewSet, basename='category')
+router.register(r'category', CategoryViewSet, basename='category')
 router.register(r'', EventViewSet, basename='event')
 
 urlpatterns = [
